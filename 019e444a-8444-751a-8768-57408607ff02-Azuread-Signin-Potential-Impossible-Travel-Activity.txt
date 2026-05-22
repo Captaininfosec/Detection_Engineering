@@ -1,0 +1,45 @@
+rule azuread_signin_potential_impossible_travel_activity {
+
+  meta:
+    author = "Rohan Taluja"
+    description = "Detects potential impossible travel activity by comparing location data"
+    severity = "Medium"
+    technique = "T1078,T1078.004"
+
+  events:
+    $e1.metadata.product_event_type = "Sign-in activity"
+    $e1.metadata.event_type = "USER_LOGIN"
+    $e1.target.user.email_addresses = $usr
+    $e1.security_result.action = "ALLOW"
+    $e1.principal.ip_geo_artifact.location.region_coordinates.latitude = $lat1
+    $e1.principal.ip_geo_artifact.location.region_coordinates.longitude = $long1
+    $e1.principal.ip_geo_artifact.location.country_or_region = $country1
+
+    $e2.metadata.product_event_type = "Sign-in activity"
+    $e2.metadata.event_type = "USER_LOGIN"
+    $e2.target.user.email_addresses = $usr
+    $e2.security_result.action = "ALLOW"
+    $e2.principal.ip_geo_artifact.location.region_coordinates.latitude = $lat2
+    $e2.principal.ip_geo_artifact.location.region_coordinates.longitude = $long2
+    $e2.principal.ip_geo_artifact.location.country_or_region = $country2
+
+  match:
+    $usr over 10m
+
+  outcome:
+    $risk_score = 40
+    $countries = arrays.concat(array_distinct($country1),array_distinct($country2))
+    $count_countries = arrays.size($countries)
+    $dist_m = max(math.geo_distance($long1, $lat1, $long2, $lat2))
+    $dist_km = $dist_m/1000
+    $dist_threshold = 10
+    $src_host1 = arrays.index_to_str(array_distinct($e1.src.hostname),0)
+    $src_host2 = arrays.index_to_str(array_distinct($e2.src.hostname),0)
+    $login1_time = max($e1.metadata.event_timestamp.seconds)
+    $login2_time = max($e2.metadata.event_timestamp.seconds)
+    $mitre_attack_tactic = "Defense Evasion, Initial Access, Persistence, Privilege Escalation"
+    $mitre_attack_technique = "T1078,T1078.004"
+
+  condition:
+    $e1 and $e2 and $dist_km >= $dist_threshold and ($src_host1 != $src_host2) and $login2_time > $login1_time
+}

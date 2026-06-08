@@ -1,0 +1,66 @@
+rule prod_unc3753_curl_superops_installer {
+
+  meta:
+    date = "2026-06-06"
+    description = "Detects cURL command used by UNC3753 to download SuperOps RMM agent during social engineering attacks. The threat actor instructs victims to execute this specific command pattern to install persistent remote access tools for data theft operations."
+    name = "UNC3753 - cURL SuperOps RMM Installer"
+    tactic = "TA0001"
+    technique = "T1566.004"
+    reference = "https://cloud.google.com/blog/topics/threat-intelligence/targeted-campaign-us-law-firms/"
+    type = "alert"
+    data_source = "Process, EDR"
+    platform = "Windows"
+    severity = "High"
+    false_positives = "Legitimate SuperOps RMM installation by IT staff."
+    tags = "unc3753, curl_download, rmm_tool"
+
+  events:
+    $e.metadata.event_type = "PROCESS_LAUNCH"
+    
+    $cmdline_ev = $e.target.process.command_line
+    $cmdline_ev != ""
+    
+    $cmdline_ev = /curl\s+.*SuperOps\.msi/ nocase
+    $cmdline_ev = /msiexec.*\/quiet/ nocase
+
+    $hostname_ev = strings.to_upper(
+      strings.coalesce(
+        $e.principal.hostname,
+        $e.principal.asset.hostname,
+        $e.intermediary.hostname,
+        $e.target.hostname,
+        $e.target.asset.hostname,
+        "N/A"
+      )
+    )
+
+    $username_ev = strings.coalesce(
+      $e.principal.user.userid,
+      $e.principal.user.user_display_name,
+      $e.principal.user.email_addresses,
+      "N/A"
+    )
+
+  outcome:
+    // CRIT:90–100 | HIGH:80–89 | MED:50–79 | LOW:20–49 | INFO:1–19
+    $risk_score = 85
+
+    // Alert title for SIEM → SOAR case name
+    $rule_name = array_distinct(strings.concat(
+      "UNC3753 - cURL SuperOps RMM Installer: ",
+      $hostname_ev
+    ))
+
+
+    // Outcome context fields for SOC analysts
+    $log_source = array_distinct(strings.coalesce($e.metadata.log_type, $e.metadata.vendor_name, $e.metadata.product_name, $e.metadata.product_event_type, "N/A"))
+    $event_description = array_distinct(strings.coalesce($e.security_result.summary, $e.security_result.description, $e.metadata.description, $e.security_result.rule_name))
+    $hostname = array_distinct($hostname_ev)
+    $username = array_distinct($username_ev)
+    $command_line = array_distinct(strings.coalesce($e.target.process.command_line, "N/A"))
+    $process_path = array_distinct($e.target.process.file.full_path)
+    $parent_process = array_distinct($e.principal.process.file.full_path)
+
+  condition:
+    $e
+}

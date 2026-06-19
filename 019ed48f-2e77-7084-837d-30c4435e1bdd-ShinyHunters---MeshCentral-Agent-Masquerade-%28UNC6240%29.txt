@@ -1,0 +1,109 @@
+rule prod_shinyhunters_meshcentral_agent_masquerade {
+
+  meta:
+    author = "Georg Lauenstein"
+    date = "2026-06-17"
+    description = "Detects file creation or process launch of a MeshCentral
+    remote-management agent that has been renamed to impersonate an Azure
+    service, or whose hash matches a known sample, as used by the ShinyHunters
+    threat actor for persistent remote access during the Oracle PeopleSoft
+    exploitation campaign reported by Mandiant in June 2026."
+    name = "ShinyHunters - MeshCentral Agent Masquerade (UNC6240)"
+    tactic = "TA0011"
+    technique = "T1219"
+    reference = "https://cloud.google.com/blog/topics/threat-intelligence/shinyhunters-targets-education-sector-oracle-exploit"
+    type = "alert"
+    data_source = "Endpoint (EDR, Windows Security, Sysmon)"
+    platform = "Windows"
+    severity = "Medium"
+    tags = "shinyhunters, unc6240, meshcentral, rmm, masquerade"
+
+  events:
+    (
+      $e.metadata.event_type = "FILE_CREATION"
+      or
+      $e.metadata.event_type = "PROCESS_LAUNCH"
+    )
+
+    $file_name_ev = strings.coalesce(
+      $e.target.file.full_path,
+      $e.target.process.file.full_path,
+      $e.target.process.file.names,
+      "N/A"
+    )
+
+
+    $sha256 = strings.coalesce(
+      $e.target.process.file.sha256,
+      $e.target.file.sha256,
+      $e.principal.process.file.sha256,
+      ""
+    )
+
+    $cmdline_ev = strings.coalesce(
+      $e.target.process.command_line,
+      $e.principal.process.command_line,
+      "N/A"
+    )
+    $proc_path_ev = strings.coalesce($e.target.process.file.full_path, "N/A")
+    $parent_proc_path_ev = strings.coalesce($e.principal.process.file.full_path, "N/A")
+    $parent_cmdline_ev = strings.coalesce($e.principal.process.command_line, "N/A")
+
+    (
+      // Azure-masquerade agent filename (meshagent32/64-azure-ops.exe, meshagent64-v2.exe)
+      $file_name_ev = /meshagent(32|64)-(azure[-_]ops|v2)\.exe$/ nocase
+      or
+      // meshagent64-azure-ops.exe (SHA256)
+      $sha256 = "f02a924c9ff92a8780ce812511341182c6b509d45bc59f3f7b522e37225d24fc"
+      or
+      // meshagent64-v2.exe (SHA256)
+      $sha256 = "d83fdb9e53c5ff03c4cb0451ea1bebd79b53f29eadc1e2fa394c7af13a86ce2f"
+      or
+      // meshagent32-azure-ops.exe (SHA256)
+      $sha256 = "c7e9332731b06644fc73e0046a2a89eaa59b09f54250e9bd622467187351711f"
+    )
+
+    // Hostname normalization (SOAR/composite safe)
+    $hostname_ev = strings.to_upper(
+      strings.coalesce(
+        $e.principal.hostname,
+        $e.principal.asset.hostname,
+        $e.intermediary.hostname,
+        $e.target.hostname,
+        $e.target.asset.hostname,
+        "N/A"
+      )
+    )
+
+    // Username normalization
+    $username_ev = strings.coalesce(
+      $e.principal.user.userid,
+      $e.principal.user.user_display_name,
+      $e.principal.user.email_addresses,
+      "N/A"
+    )
+
+  outcome:
+    $risk_score = 85
+
+
+    $vendor_name = array_distinct(strings.coalesce($e.metadata.vendor_name, "N/A"))
+    $product_name = array_distinct(strings.coalesce($e.metadata.product_name, "N/A"))
+
+    $hostname = array_distinct($hostname_ev)
+    $username = array_distinct($username_ev)
+
+    $matched_sha256 = array_distinct(strings.coalesce($sha256, "N/A"))
+    $file_full_path = array_distinct($file_name_ev)
+
+    $command_line = array_distinct($cmdline_ev)
+    $parent_process_cmdline = array_distinct($parent_cmdline_ev)
+
+    $process_path = array_distinct($proc_path_ev)
+    $parent_process_name = array_distinct($parent_proc_path_ev)
+    $target_process_file_sha256 = array_distinct(strings.coalesce($e.target.process.file.sha256, "N/A"))
+    $principal_process_file_sha256 = array_distinct(strings.coalesce($e.principal.process.file.sha256, "N/A"))
+
+  condition:
+    $e
+}

@@ -1,0 +1,25 @@
+rule node_suspicious_setup_execution {
+  meta:
+    author = "Tek"
+    description = "Detects Node.js executing the malicious setup.cjs script with the --no-warnings flag. This execution sequence is associated with the easy-day-js typosquat postinstall hook used in the Mastra npm supply chain compromise."
+    severity = "High"
+    reference = "https://www.microsoft.com/en-us/security/blog/2026/06/17/postinstall-payload-inside-mastra-npm-supply-chain-compromise/"
+    false_positive = "Legitimate development environments or other npm packages might use setup.cjs along with the --no-warnings flag. If this generates noise, tune the rule by excluding known trusted developer directories or authorized build processes."
+events:
+    $e.metadata.event_type = "PROCESS_LAUNCH"
+    $e.target.process.file.name =~ /node(\.exe)?$/ nocase
+    $e.target.process.command_line =~ /setup\.cjs|easy-day-js/ nocase
+    $e.target.process.command_line =~ /--no-warnings/ nocase
+
+  condition:
+    $e
+
+  outcome:
+    $device_name = array_distinct($e.principal.hostname)
+    $account_name = array_distinct($e.principal.user.userid)
+    $file_name = array_distinct($e.target.process.file.name)
+    $command_line = array_distinct($e.target.process.command_line)
+    $folder_path = array_distinct($e.target.process.file.full_path)
+    $initiating_process_name = array_distinct($e.principal.process.file.full_path)
+    $initiating_process_command_line = array_distinct($e.principal.process.command_line)
+}

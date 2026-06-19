@@ -1,0 +1,79 @@
+rule prod_shinyhunters_meshcentral_c2 {
+
+  meta:
+    author = "Georg Lauenstein"
+    date = "2026-06-17"
+    description = "Detects DNS queries or outbound network connections to
+    attacker-controlled MeshCentral remote-management command-and-control
+    infrastructure used by the ShinyHunters threat actor during the Oracle
+    PeopleSoft exploitation campaign reported by Mandiant in June 2026."
+    name = "ShinyHunters - MeshCentral C2 Beaconing (UNC6240)"
+    tactic = "TA0011"
+    technique = "T1071.001"
+    reference = "https://cloud.google.com/blog/topics/threat-intelligence/shinyhunters-targets-education-sector-oracle-exploit"
+    type = "alert"
+    data_source = "Network (DNS, Proxy, Firewall, IDS/IPS)"
+    platform = "Cross-platform"
+    severity = "Medium"
+    tags = "shinyhunters, unc6240, meshcentral"
+
+
+  events:
+    (
+      $e.metadata.event_type = "NETWORK_CONNECTION"
+      or
+      $e.metadata.event_type = "NETWORK_DNS"
+    )
+
+    $domain_ev = strings.coalesce(
+      $e.network.dns.questions.name,
+      $e.target.hostname,
+      ""
+    )
+
+    $proc_path_ev = strings.coalesce($e.principal.process.file.full_path, "")
+    $target_ip_ev = strings.coalesce($e.target.ip, "N/A")
+
+    // Positive signal: dedicated C2 domain OR a known operator agent IP
+    (
+      $domain_ev = /(^|\.)azurenetfiles\.net$/ nocase
+      or
+      $target_ip_ev = /^(142\.11\.200\.18[6-9]|142\.11\.200\.190|176\.120\.22\.24)$/
+    )
+
+    $hostname_ev = strings.to_upper(
+      strings.coalesce(
+        $e.principal.hostname,
+        $e.principal.asset.hostname,
+        $e.principal.ip,
+        "N/A"
+      )
+    )
+    $username_ev = strings.coalesce(
+      $e.principal.user.userid,
+      $e.principal.user.user_display_name,
+      $e.principal.user.email_addresses,
+      "N/A"
+    )
+
+
+  outcome:
+    //   CRIT 90–100 | HIGH 80–89 | MED 50–79 | LOW 20–49 | INFO 1–19
+    $risk_score = max(
+      85 -
+      if($e.security_result.action = "BLOCK", 75)
+    )
+
+    $vendor_name = array_distinct(strings.coalesce($e.metadata.vendor_name, "N/A"))
+    $product_name = array_distinct(strings.coalesce($e.metadata.product_name, "N/A"))
+
+    $hostname = array_distinct($hostname_ev)
+    $username = array_distinct($username_ev)
+    $fqdn = array_distinct(strings.to_upper($domain_ev))
+    $process_path = array_distinct(strings.coalesce($proc_path_ev, "N/A"))
+    $suspicious_ip = array_distinct($target_ip_ev)
+
+  condition:
+    $e
+    
+}

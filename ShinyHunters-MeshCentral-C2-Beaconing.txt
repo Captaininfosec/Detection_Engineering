@@ -1,7 +1,7 @@
 rule prod_shinyhunters_meshcentral_c2 {
 
   meta:
-    author = "Georg Lauenstein"
+    author = "RAVI"
     date = "2026-06-17"
     description = "Detects DNS queries or outbound network connections to
     attacker-controlled MeshCentral remote-management command-and-control

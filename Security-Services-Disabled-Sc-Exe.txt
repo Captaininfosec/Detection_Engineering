@@ -1,0 +1,18 @@
+
+rule security_services_disabled_sc_exe {
+  meta:
+    author = "Tek"
+    description = "Detects the modification or termination of critical Windows security services using the Service Control utility (sc.exe)."
+    severity = "High"
+    mitre_attack_technique = "TA0005, T1562.001"
+    reference = "https://www.huntress.com/blog/potemkin-loader-rmmproject-clickfix-attack"
+    false_positive = "Legitimate administrator troubleshooting may cause false positives. If necessary, filter out known administrative tools, expected IT accounts, or specific endpoints."
+events:
+    $e.metadata.event_type = "PROCESS_LAUNCH"
+    ($e.target.process.file.full_path = /sc\.exe$/ nocase or $e.target.process.command_line = /sc\.exe/ nocase)
+    re.regex($e.target.process.command_line, /(?i)stop|config/)
+    re.regex($e.target.process.command_line, /(?i)WinDefend|wscsvc|SecurityHealthService/)
+
+  condition:
+    $e
+}

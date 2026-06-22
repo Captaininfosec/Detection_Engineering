@@ -1,6 +1,5 @@
 rule node_suspicious_setup_execution {
   meta:
-    author = "Tek"
     description = "Detects Node.js executing the malicious setup.cjs script with the --no-warnings flag. This execution sequence is associated with the easy-day-js typosquat postinstall hook used in the Mastra npm supply chain compromise."
     severity = "High"
     reference = "https://www.microsoft.com/en-us/security/blog/2026/06/17/postinstall-payload-inside-mastra-npm-supply-chain-compromise/"

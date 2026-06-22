@@ -1,12 +1,5 @@
 rule smbexec_lateral_movement {
-  meta:
-    author = "Tek"
-    description = "Detects the command line pattern characteristic of Impacket's SMBExec, involving echoing a payload to a temporary batch file, executing, and deleting it."
-    severity = "High"
-    reference = "https://www.huntress.com/blog/potemkin-loader-rmmproject-clickfix-attack"
-    mitre_attack = "TA0008, T1570, T1059.003"
-    false_positive1 = "Penetration testing activities"
-    false_positive2 = "Authorized vulnerability scanning"
+  
 events:
     $e.metadata.event_type = "PROCESS_LAUNCH"
     $e.target.process.file.full_path = /\\cmd\.exe$/ nocase

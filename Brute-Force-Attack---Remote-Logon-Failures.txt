@@ -1,5 +1,4 @@
 index=* (EventCode=4625 OR action="failure") LogonType IN (3, 10) 
-```Author: detections.ai | Date: 2026-06-18 | References: https://www.bleepingcomputer.com/news/security/fortibleed-leak-exposes-fortinet-vpn-credentials-for-73-000-devices/ | Description: Detects patterns indicative of automated brute-force attacks against authentication interfaces by counting consecutive remote logon failures for single user accounts. This behavior was observed in the FortiBleed campaign targeting Fortinet devices.```
 
 | fillnull value="unknown" src_ip user
 | where NOT cidrmatch("10.0.0.0/8", src_ip) ```FP Tuning Placeholder: Exclude known internal IP ranges```

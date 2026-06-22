@@ -1,6 +1,6 @@
 rule vllm_cve_2026_22778_avbuffer_system_shell_spawn {
   meta:
-    author = "tim@detections.ai"
+    author = "Ravi"
     description = "Detects post-exploitation of CVE-2026-22778 (vLLM libopenjp2 JPEG2000 cdef heap overflow). The overwritten AVBuffer free() pointer is set to system(), so a successful exploit spawns /bin/sh -c as a direct child of the vLLM/python inference process. Matches a shell or download/exec utility launched with a vLLM/python/uvicorn parent, excluding benign python worker children."
     severity = "Critical"
     reference = "https://github.com/advisories/GHSA-4r2x-xpjr-7cvv"

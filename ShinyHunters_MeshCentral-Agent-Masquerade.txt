@@ -1,8 +1,7 @@
 rule prod_shinyhunters_meshcentral_agent_masquerade {
 
   meta:
-    author = "Georg Lauenstein"
-    date = "2026-06-17"
+    author = "ravi"
     description = "Detects file creation or process launch of a MeshCentral
     remote-management agent that has been renamed to impersonate an Azure
     service, or whose hash matches a known sample, as used by the ShinyHunters

@@ -1,7 +1,7 @@
 
 rule security_services_disabled_sc_exe {
   meta:
-    author = "Tek"
+   
     description = "Detects the modification or termination of critical Windows security services using the Service Control utility (sc.exe)."
     severity = "High"
     mitre_attack_technique = "TA0005, T1562.001"
